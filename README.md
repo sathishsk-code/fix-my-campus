@@ -1,4 +1,4 @@
-# Fix My Campus — Corrected Full-Stack Project
+# Fix My Campus — Full-Stack Project
 
 Campus issue reporting and resolution system using Node.js, Express, SQLite, JWT, bcrypt and a responsive HTML/CSS/JavaScript frontend.
 
