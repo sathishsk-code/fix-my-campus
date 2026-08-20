@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  STAFF
+  ADMIN
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum Status {
+  REPORTED
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum NotificationType {
+  COMPLAINT_CREATED
+  COMPLAINT_ASSIGNED
+  STATUS_CHANGED
+  COMPLAINT_RESOLVED
+  FEEDBACK_REQUEST
+  SYSTEM
+}
+
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  password String
+  role Role @default(STUDENT)
+  studentId String?
+  department String?
+  year String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  complaints Complaint[] @relation("Reporter")
+  assignments Complaint[] @relation("Assignee")
+  feedback Feedback[]
+  notifications Notification[]
+  history ComplaintStatusHistory[] @relation("ChangedBy")
+}
+
+model Category {
+  id String @id @default(cuid())
+  name String @unique
+  description String?
+  icon String?
+  createdAt DateTime @default(now())
+  complaints Complaint[]
+}
+
+model Location {
+  id String @id @default(cuid())
+  name String
+  building String?
+  floor String?
+  room String?
+  description String?
+  createdAt DateTime @default(now())
+  complaints Complaint[]
+}
+
+model Complaint {
+  id String @id @default(cuid())
+  trackingNumber String @unique
+  userId String
+  title String
+  description String
+  categoryId String
+  locationId String
+  imageUrl String?
+  priority Priority @default(LOW)
+  status Status @default(REPORTED)
+  assignedTo String?
+  resolutionNotes String?
+  resolutionImageUrl String?
+  resolvedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation("Reporter", fields:[userId], references:[id])
+  category Category @relation(fields:[categoryId], references:[id])
+  location Location @relation(fields:[locationId], references:[id])
+  assignedStaff User? @relation("Assignee", fields:[assignedTo], references:[id])
+  feedback Feedback?
+  notifications Notification[]
+  history ComplaintStatusHistory[]
+  @@index([userId])
+  @@index([status])
+  @@index([priority])
+  @@index([categoryId])
+  @@index([locationId])
+}
+
+model Feedback {
+  id String @id @default(cuid())
+  complaintId String @unique
+  userId String
+  rating Int
+  comment String?
+  createdAt DateTime @default(now())
+  complaint Complaint @relation(fields:[complaintId], references:[id])
+  user User @relation(fields:[userId], references:[id])
+}
+
+model Notification {
+  id String @id @default(cuid())
+  userId String
+  complaintId String?
+  title String
+  message String
+  type NotificationType @default(SYSTEM)
+  isRead Boolean @default(false)
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId], references:[id])
+  complaint Complaint? @relation(fields:[complaintId], references:[id])
+  @@index([userId,isRead])
+}
+
+model ComplaintStatusHistory {
+  id String @id @default(cuid())
+  complaintId String
+  oldStatus Status?
+  newStatus Status
+  changedBy String
+  note String?
+  createdAt DateTime @default(now())
+  complaint Complaint @relation(fields:[complaintId], references:[id])
+  changedByUser User @relation("ChangedBy", fields:[changedBy], references:[id])
+}
