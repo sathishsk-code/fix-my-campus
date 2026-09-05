@@ -121,7 +121,7 @@ function publicUser(row) {
 
 app.post("/api/auth/register", async (req, res) => {
   try {
-    const { name, email, password, department = "" } = req.body;
+    const { name, email, password, department = "" } = req.body || {};
     if (!name || !email || !password) return res.status(400).json({ message: "Name, email and password are required" });
     if (password.length < 6) return res.status(400).json({ message: "Password must contain at least 6 characters" });
     const hash = await bcrypt.hash(password, 10);
@@ -137,12 +137,17 @@ app.post("/api/auth/register", async (req, res) => {
 });
 
 app.post("/api/auth/login", async (req, res) => {
-  const { email, password } = req.body;
-  const user = db.prepare("SELECT * FROM users WHERE email=?").get((email || "").trim().toLowerCase());
-  if (!user || !(await bcrypt.compare(password || "", user.password)))
-    return res.status(401).json({ message: "Invalid email or password" });
-  const token = jwt.sign({ id: user.id, role: user.role, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
-  res.json({ token, user: publicUser(user) });
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
+    const user = db.prepare("SELECT * FROM users WHERE email=?").get(String(email).trim().toLowerCase());
+    if (!user || !(await bcrypt.compare(String(password), user.password)))
+      return res.status(401).json({ message: "Invalid email or password" });
+    const token = jwt.sign({ id: user.id, role: user.role, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+    res.json({ token, user: publicUser(user) });
+  } catch (e) {
+    res.status(500).json({ message: "Login failed. Please try again." });
+  }
 });
 
 app.get("/api/auth/me", auth, (req, res) => {
