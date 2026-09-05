@@ -272,3 +272,20 @@ async function askAI(){
 }
 
 window.addEventListener("keydown", e => { if(e.key==="Enter" && document.activeElement?.id==="aiQuestion"){ e.preventDefault(); askAI(); } });
+
+// Keep the session in sync across browser tabs/windows on the same origin.
+// localStorage changes fire a "storage" event in every *other* tab, so when a
+// user logs in (or out) in one tab, the others update instead of getting stuck
+// on a stale login/dashboard screen.
+window.addEventListener("storage", e => {
+  if (e.key !== "fmc_token") return;
+  const newToken = e.newValue;
+  if (newToken === state.token) return;
+  state.token = newToken;
+  if (!newToken) {
+    state.user = null;
+    renderAuth();
+  } else {
+    boot();
+  }
+});
